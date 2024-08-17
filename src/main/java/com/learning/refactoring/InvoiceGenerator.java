@@ -1,8 +1,9 @@
 package com.learning.refactoring;
 
-import java.text.NumberFormat;
-import java.util.Locale;
+import com.learning.refactoring.models.*;
+
 import java.util.Map;
+
 import static java.lang.String.format;
 
 /**
@@ -25,47 +26,39 @@ import static java.lang.String.format;
 
 public class InvoiceGenerator {
     public String statement(final Invoice invoice, final Map<String, Play> plays) {
-        var totalAmount = 0.0;
-        var volumeCredits = 0;
-        var result = format("Statement for %s%n", invoice.customer());
-        final var currency = NumberFormat.getCurrencyInstance(Locale.US);
+        Statement statement = new Statement();
+        return statement.renderPlainText(createStatementData(invoice, plays));
+    }
 
-        for (Performance perf : invoice.performances()) {
-            if (!plays.containsKey(perf.playID()))
-                throw new IllegalArgumentException("performance with unknown play id: " + perf.playID());
-            final var play = plays.get(perf.playID());
-            double thisAmount;
+    public String htmlStatement(final Invoice invoice, final Map<String, Play> plays) {
+        Statement statement = new Statement();
+        return statement.renderHtml(createStatementData(invoice, plays));
+    }
 
-            switch (play.type()) {
-                case "tragedy" -> {
-                    thisAmount = 40000.0;
-                    if (perf.audience() > 30) {
-                        thisAmount += 1000 * (perf.audience() - 30);
-                    }
-                }
-                case "comedy" -> {
-                    thisAmount = 30000.0;
-                    if (perf.audience() > 20) {
-                        thisAmount += 10000 + 500 * (perf.audience() - 20);
-                    }
-                    thisAmount += 300 * perf.audience();
-                }
-                default -> throw new IllegalArgumentException("unknown play type: " + play.type());
-            }
+    private StatementData createStatementData(Invoice invoice, Map<String, Play> plays) {
+        StatementData data = new StatementData();
+        data.setCustomer(invoice.customer());
+        data.setPerformances(invoice.performances().stream().map(v -> enrichPerformance(v, plays)).toList());
+        return data;
+    }
 
-            // add volume credits
-            volumeCredits += Math.max(perf.audience() - 30, 0);
-            // add extra credit for every ten comedy attendees
-            if ("comedy".equals(play.type()))
-                volumeCredits += perf.audience() / 5;
-
-            // print line for this order
-            result += format("  %s: %s (%d seats)%n", play.name(), currency.format(thisAmount / 100.0), perf.audience());
-            totalAmount += thisAmount;
-        }
-
-        result += format("Amount owed is %s%n", currency.format(totalAmount / 100.0));
-        result += format("You earned %d credits%n", volumeCredits);
+    private PerformanceExt enrichPerformance(Performance aPerformance, Map<String, Play> plays) {
+        Play play = plays.get(aPerformance.playID());
+        if (play == null) throw new IllegalArgumentException("performance with unknown play id: " + aPerformance.playID());
+        final PerformanceCalculator calculator = createPerformanceCalculator(aPerformance, play);
+        var result = new PerformanceExt(aPerformance);
+        result.setPlay(calculator.play());
+        result.setAmount(calculator.amount());
+        result.setVolumeCredit(calculator.volumeCredits());
         return result;
     }
+
+    private PerformanceCalculator createPerformanceCalculator(Performance aPerformance, Play play) {
+        return switch (play.type()) {
+            case "tragedy" -> new TragedyCalculator(aPerformance, play);
+            case "comedy" -> new ComedyCalculator(aPerformance, play);
+            default -> throw new IllegalArgumentException("unknown play type: " + play.type());
+        };
+    }
+
 }

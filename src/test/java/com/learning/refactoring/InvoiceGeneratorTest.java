@@ -3,6 +3,8 @@ package com.learning.refactoring;
 
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.learning.refactoring.models.Invoice;
+import com.learning.refactoring.models.Play;
 import org.apache.commons.io.FileUtils;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
@@ -46,7 +48,7 @@ class InvoiceGeneratorTest {
         var plays = readPlays("plays.json");;
 
         //When
-        Exception exception = assertThrows(IllegalArgumentException.class, () -> generator. statement(invoice, plays));
+        Exception exception = assertThrows(IllegalArgumentException.class, () -> generator.statement(invoice, plays));
 
         //Then
         Assertions.assertEquals("performance with unknown play id: hamlet2", exception.getMessage());
@@ -70,7 +72,30 @@ class InvoiceGeneratorTest {
                 Amount owed is $1,730.00
                 You earned 47 credits
                 """;
+        Assertions.assertEquals(expected, actual);
+    }
 
+    @Test
+    void generateHtmlStatementSuccess() throws IOException {
+        //Given
+        var invoice = readInvoices("invoices.json").get(0);
+        var plays = readPlays("plays.json");
+
+        //When
+        String actual = generator.htmlStatement(invoice, plays);
+
+        //Then
+        String expected = """
+                <h1>Statement for BigCo</h1>
+                <table>
+                <tr><th>play</th><th>seats</th><th>cost</th></tr>
+                <tr><td>Hamlet</td><td>$650.00</td><td>55</td></tr>
+                <tr><td>As You Like It</td><td>$580.00</td><td>35</td></tr>
+                <tr><td>Othello</td><td>$500.00</td><td>40</td></tr>
+                </table>
+                <p>Amount owed is <em>$1,730.00</em></p>
+                <p>You earned <em>47</em> credits</p>
+                """;
         Assertions.assertEquals(expected, actual);
     }
 

@@ -1,4 +1,4 @@
-package com.learning.refactoring;
+package com.learning.refactoring.models;
 
 import java.util.List;
 
