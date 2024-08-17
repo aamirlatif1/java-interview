@@ -27,7 +27,7 @@ class InvoiceGeneratorTest {
     }
 
     @Test
-    void unknownTypeInInvoice() throws IOException {
+    void unknownPlayType() throws IOException {
         //Given
         var invoice = readInvoices("invoices.json").get(0);
         var plays = readPlays("plays_with_unknown_type.json");
